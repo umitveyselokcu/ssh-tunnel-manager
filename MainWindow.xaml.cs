@@ -1,11 +1,6 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Windows;
 using Microsoft.Win32;
@@ -24,6 +19,7 @@ namespace SshTunnelManager
         private readonly List<TunnelConfig> _configurations;
         private readonly Dictionary<string, SshClient> _activeConnections = new();
         private GlobalConfig _globalConfig;
+        private bool _showDetails = true;
 
         public MainWindow()
         {
@@ -31,7 +27,7 @@ namespace SshTunnelManager
             _globalConfig = LoadGlobalConfig();
             _configurations = LoadConfigurations();
             ValidatePemFiles();
-            TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+            UpdateTunnelTable();
             PemDirectoryPathText.Text = _globalConfig.PemDirectoryPath; // Display the PEM directory
             Closing += MainWindow_Closing;
         }
@@ -196,13 +192,37 @@ namespace SshTunnelManager
             if (_configurations.Remove(config))
             {
                 SaveConfigurations();
-                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+                UpdateTunnelTable();
                 MessageBox.Show($"Configuration for {config.Name} removed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             else
             {
                 MessageBox.Show("Failed to remove configuration.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void UpdateTunnelTable()
+        {
+            if (_showDetails)
+            {
+                TunnelTable.Columns[1].Visibility = Visibility.Visible; // IP Address
+                TunnelTable.Columns[2].Visibility = Visibility.Visible; // Local Port
+                TunnelTable.Columns[3].Visibility = Visibility.Visible; // Remote Host
+                TunnelTable.Columns[4].Visibility = Visibility.Visible; // Remote Port
+                TunnelTable.Columns[5].Visibility = Visibility.Visible; // PemFile
+                TunnelTable.Columns[9].Visibility = Visibility.Visible; // Update
+            }
+            else
+            {
+                TunnelTable.Columns[1].Visibility = Visibility.Collapsed; // IP Address
+                TunnelTable.Columns[2].Visibility = Visibility.Collapsed; // Local Port
+                TunnelTable.Columns[3].Visibility = Visibility.Collapsed; // Remote Host
+                TunnelTable.Columns[4].Visibility = Visibility.Collapsed; // Remote Port
+                TunnelTable.Columns[5].Visibility = Visibility.Collapsed; // PemFile
+                TunnelTable.Columns[9].Visibility = Visibility.Collapsed; // Update
+            }
+
+            TunnelTable.ItemsSource = GenerateViewModels(_configurations);
         }
 
         private void MainWindow_Closing(object sender, CancelEventArgs e)
@@ -235,7 +255,7 @@ namespace SshTunnelManager
 
                 _configurations.AddRange(importedConfigs);
                 SaveConfigurations();
-                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+                UpdateTunnelTable();
                 MessageBox.Show("Configurations imported successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
@@ -264,7 +284,7 @@ namespace SshTunnelManager
             {
                 _configurations.Add(addEditWindow.TunnelConfig);
                 SaveConfigurations();
-                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+                UpdateTunnelTable();
             }
         }
 
@@ -274,9 +294,14 @@ namespace SshTunnelManager
             if (addEditWindow.ShowDialog() == true)
             {
                 SaveConfigurations();
-                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+                UpdateTunnelTable();
             }
         }
 
+        private void ToggleDetails_Click(object sender, RoutedEventArgs e)
+        {
+            _showDetails = !_showDetails;
+            UpdateTunnelTable();
+        }
     }
 }

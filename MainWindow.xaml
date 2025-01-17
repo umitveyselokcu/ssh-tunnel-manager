@@ -3,11 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:helpers="clr-namespace:SshTunnelManager.Services.Helpers"
         Title="SSH Tunnel Manager" Height="600" Width="1000"
+        Icon="Resources/favicon.ico"
         Closing="MainWindow_Closing">
     <Window.Resources>
         <helpers:BoolToBrushConverter x:Key="BoolToBrushConverter" />
         <helpers:BoolToConnectDisconnectConverter x:Key="BoolToConnectDisconnectConverter" />
     </Window.Resources>
+
     <DockPanel>
         <!-- Header -->
         <DockPanel Background="LightGray" DockPanel.Dock="Top" Height="50">
@@ -20,6 +22,7 @@
             <Button Content="Add Tunnel" Width="100" Margin="5" Click="AddTunnel_Click" />
             <Button Content="Import Config" Width="120" Margin="5" Click="ImportConfigurations" />
             <Button Content="Set PEM Directory" Width="150" Margin="5" Click="SetPemDirectoryPath" />
+            <Button Content="Toggle Details" Width="120" Margin="5" Click="ToggleDetails_Click" />
         </StackPanel>
 
         <!-- PEM Directory Path Display -->
@@ -29,8 +32,19 @@
         </StackPanel>
 
         <!-- DataGrid for Tunnel Configurations -->
-        <DataGrid x:Name="TunnelTable" AutoGenerateColumns="False" Margin="10"
+        <DataGrid x:Name="TunnelTable" AutoGenerateColumns="False" Margin="10" 
                   IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
+
+            <DataGrid.Resources>
+                <!-- Remove the blue selection highlight -->
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent" />
+                <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black" />
+            </DataGrid.Resources>
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
             <DataGrid.Columns>
                 <!-- Name Column -->
                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
@@ -42,8 +56,8 @@
                 <DataGridTextColumn Header="Remote Host" Binding="{Binding RemoteHost}" Width="2*" />
                 <!-- Remote Port Column -->
                 <DataGridTextColumn Header="Remote Port" Binding="{Binding RemotePort}" Width="1*" />
-                <!-- PemFileName Port Column -->
-                <DataGridTextColumn Header="Pem file" Binding="{Binding PemFileName}" Width="1*" />
+                <!-- PemFileName Column -->
+                <DataGridTextColumn Header="Pem File" Binding="{Binding PemFileName}" Width="3*" />
                 <!-- Status Column -->
                 <DataGridTemplateColumn Header="Status" Width="1*">
                     <DataGridTemplateColumn.CellTemplate>
@@ -54,20 +68,42 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <!-- Actions Column -->
-                <DataGridTemplateColumn Header="Actions" Width="3*">
+                <DataGridTemplateColumn Header="Actions" Width="1*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <Button Content="Edit" Command="{Binding EditCommand}" Margin="5" />
+                          
+
                                 <Button Content="{Binding IsConnected, Converter={StaticResource BoolToConnectDisconnectConverter}}"
                                         Command="{Binding ToggleConnectionCommand}" Margin="5" />
-                                <Button Content="Open Browser" Command="{Binding OpenBrowserCommand}" Margin="5" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>                        
+                <DataGridTemplateColumn Header="Browser" Width="1*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                          
+                                <Button Content="Open" Command="{Binding OpenBrowserCommand}" Margin="5" />
+
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>            
+                <DataGridTemplateColumn Header="Update" Width="2*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                          
+
+                                <Button Content="Edit" Command="{Binding EditCommand}" Margin="5" />
+                                <Button Content="Remove" Command="{Binding RemoveConfigCommand}" Margin="5" />
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
             </DataGrid.Columns>
         </DataGrid>
-
     </DockPanel>
 </Window>

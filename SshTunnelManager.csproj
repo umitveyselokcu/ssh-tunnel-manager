@@ -14,13 +14,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="obj\" />
+      <Folder Include="Resources\" />
     </ItemGroup>
 
+
     <ItemGroup>
-      <None Update="tunnels.json">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+      <None Remove="Resources\favicon.ico" />
+      <Content Include="Resources\favicon.ico">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
 </Project>
