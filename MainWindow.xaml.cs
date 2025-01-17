@@ -1,50 +1,99 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Windows;
-using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Media;
+using Microsoft.Win32;
+using Microsoft.WindowsAPICodePack.Dialogs;
 using Renci.SshNet;
+using SshTunnelManager.Services;
+using SshTunnelManager.Services.Configs;
 
 namespace SshTunnelManager
 {
-    public class TunnelConfig
-    {
-        public string Name { get; set; } = string.Empty;
-        public string IpAddress { get; set; } = string.Empty;
-        public string PemFilePath { get; set; } = string.Empty;
-        public int LocalPort { get; set; }
-        public string RemoteHost { get; set; } = string.Empty;
-        public int RemotePort { get; set; }
-        public string BrowserUrl { get; set; } = string.Empty;
-    }
-
     public partial class MainWindow : Window
     {
+        private const string ConfigFileName = "tunnels.json";
+        private const string GlobalConfigFileName = "globalconfig.json";
+
         private readonly List<TunnelConfig> _configurations;
         private readonly Dictionary<string, SshClient> _activeConnections = new();
+        private GlobalConfig _globalConfig;
 
         public MainWindow()
         {
             InitializeComponent();
+            _globalConfig = LoadGlobalConfig();
             _configurations = LoadConfigurations();
+            ValidatePemFiles();
             TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+            PemDirectoryPathText.Text = _globalConfig.PemDirectoryPath; // Display the PEM directory
             Closing += MainWindow_Closing;
         }
 
         private List<TunnelConfig> LoadConfigurations()
         {
-            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tunnels.json");
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
             if (!File.Exists(configPath))
-                throw new FileNotFoundException("Configuration file not found", configPath);
+                return new List<TunnelConfig>();
+
+            try
+            {
+                var jsonData = File.ReadAllText(configPath);
+                return JsonSerializer.Deserialize<List<TunnelConfig>>(jsonData) ?? new List<TunnelConfig>();
+            }
+            catch
+            {
+                MessageBox.Show("Failed to load configurations. The file might be corrupted.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return new List<TunnelConfig>();
+            }
+        }
+
+        private GlobalConfig LoadGlobalConfig()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, GlobalConfigFileName);
+            if (!File.Exists(configPath))
+            {
+                var defaultConfig = new GlobalConfig();
+                SaveGlobalConfig(defaultConfig);
+                return defaultConfig;
+            }
 
             var configJson = File.ReadAllText(configPath);
-            return JsonSerializer.Deserialize<List<TunnelConfig>>(configJson) ?? new List<TunnelConfig>();
+            return JsonSerializer.Deserialize<GlobalConfig>(configJson) ?? new GlobalConfig();
+        }
+
+        private void SaveConfigurations()
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ConfigFileName);
+            var jsonData = JsonSerializer.Serialize(_configurations, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(configPath, jsonData);
+        }
+
+        private void SaveGlobalConfig(GlobalConfig config)
+        {
+            var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, GlobalConfigFileName);
+            var configJson = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(configPath, configJson);
+        }
+
+        private void ValidatePemFiles()
+        {
+            var missingFiles = _configurations
+                .Where(config => !File.Exists(Path.Combine(_globalConfig.PemDirectoryPath, config.PemFileName)))
+                .Select(config => Path.Combine(_globalConfig.PemDirectoryPath, config.PemFileName))
+                .ToList();
+
+            if (missingFiles.Any())
+            {
+                MessageBox.Show($"The following PEM files are missing:\n{string.Join("\n", missingFiles)}",
+                    "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         private List<TunnelViewModel> GenerateViewModels(List<TunnelConfig> configs)
@@ -53,7 +102,7 @@ namespace SshTunnelManager
 
             foreach (var config in configs)
             {
-                viewModels.Add(new TunnelViewModel(config, ToggleConnection, OpenBrowser));
+                viewModels.Add(new TunnelViewModel(config, ToggleConnection, OpenBrowser, RemoveConfiguration, EditTunnel_Click));
             }
 
             return viewModels;
@@ -63,13 +112,11 @@ namespace SshTunnelManager
         {
             if (_activeConnections.ContainsKey(config.Name))
             {
-                // Disconnect
                 try
                 {
                     _activeConnections[config.Name].Disconnect();
                     _activeConnections.Remove(config.Name);
                     updateConnectionStatus(false);
-
                     MessageBox.Show($"Disconnected from {config.Name}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
@@ -81,7 +128,11 @@ namespace SshTunnelManager
             {
                 try
                 {
-                    using var privateKeyFile = new PrivateKeyFile(config.PemFilePath);
+                    var pemFilePath = Path.Combine(_globalConfig.PemDirectoryPath, config.PemFileName);
+                    if (!File.Exists(pemFilePath))
+                        throw new FileNotFoundException("PEM file not found", pemFilePath);
+
+                    using var privateKeyFile = new PrivateKeyFile(pemFilePath);
                     var connectionInfo = new ConnectionInfo(
                         config.IpAddress,
                         "ubuntu",
@@ -103,7 +154,6 @@ namespace SshTunnelManager
 
                     _activeConnections[config.Name] = client;
                     updateConnectionStatus(true);
-
                     MessageBox.Show($"Connected to {config.Name}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
@@ -141,6 +191,20 @@ namespace SshTunnelManager
             }
         }
 
+        private void RemoveConfiguration(TunnelConfig config)
+        {
+            if (_configurations.Remove(config))
+            {
+                SaveConfigurations();
+                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+                MessageBox.Show($"Configuration for {config.Name} removed.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                MessageBox.Show("Failed to remove configuration.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             foreach (var client in _activeConnections.Values)
@@ -155,103 +219,64 @@ namespace SshTunnelManager
                 }
             }
         }
-    }
 
-    public class TunnelViewModel : INotifyPropertyChanged
-    {
-        public string Name { get; }
-        public ICommand ToggleConnectionCommand { get; }
-        public ICommand OpenBrowserCommand { get; }
-
-        private bool _isConnected;
-        public bool IsConnected
+        private void ImportConfigurations(object sender, RoutedEventArgs e)
         {
-            get => _isConnected;
-            private set
+            var openFileDialog = new OpenFileDialog
             {
-                if (_isConnected != value)
-                {
-                    _isConnected = value;
-                    OnPropertyChanged(nameof(IsConnected));
-                }
+                Filter = "JSON Files (*.json)|*.json",
+                Title = "Import Tunnel Configurations"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                var importedJson = File.ReadAllText(openFileDialog.FileName);
+                var importedConfigs = JsonSerializer.Deserialize<List<TunnelConfig>>(importedJson) ?? new List<TunnelConfig>();
+
+                _configurations.AddRange(importedConfigs);
+                SaveConfigurations();
+                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+                MessageBox.Show("Configurations imported successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
-        private readonly TunnelConfig _config;
-        private readonly Action<TunnelConfig, Action<bool>> _toggleConnection;
-
-        public TunnelViewModel(TunnelConfig config, Action<TunnelConfig, Action<bool>> toggleConnection, Action<TunnelConfig> openBrowser)
+        private void SetPemDirectoryPath(object sender, RoutedEventArgs e)
         {
-            _config = config;
-            _toggleConnection = toggleConnection;
-
-            Name = _config.Name;
-            ToggleConnectionCommand = new RelayCommand(() => _toggleConnection(_config, UpdateConnectionStatus));
-            OpenBrowserCommand = new RelayCommand(() => openBrowser(_config));
-        }
-
-        private void UpdateConnectionStatus(bool isConnected)
-        {
-            IsConnected = isConnected;
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-    }
-
-    public class RelayCommand : ICommand
-    {
-        private readonly Action _execute;
-        private readonly Func<bool>? _canExecute;
-
-        public RelayCommand(Action execute, Func<bool>? canExecute = null)
-        {
-            _execute = execute;
-            _canExecute = canExecute;
-        }
-
-        public bool CanExecute(object? parameter) => _canExecute?.Invoke() ?? true;
-
-        public void Execute(object? parameter) => _execute();
-
-        public event EventHandler? CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-    }
-
-    public class BoolToConnectDisconnectConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            return value is bool isConnected && isConnected ? "Disconnect" : "Connect";
-        }
-
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public class BoolToBrushConverter : IValueConverter
-    {
-        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
-            if (value is bool isConnected)
+            var folderDialog = new CommonOpenFileDialog
             {
-                return isConnected ? Brushes.Green : Brushes.Red;
+                IsFolderPicker = true,
+                Title = "Select PEM File Directory"
+            };
+
+            if (folderDialog.ShowDialog() == CommonFileDialogResult.Ok)
+            {
+                _globalConfig.PemDirectoryPath = folderDialog.FileName;
+                SaveGlobalConfig(_globalConfig);
+                PemDirectoryPathText.Text = _globalConfig.PemDirectoryPath; // Update displayed PEM directory
+                MessageBox.Show("PEM directory path updated successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
-            return Brushes.Gray;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        private void AddTunnel_Click(object sender, RoutedEventArgs e)
         {
-            throw new NotImplementedException();
+            var addEditWindow = new AddEditTunnelWindow();
+            if (addEditWindow.ShowDialog() == true)
+            {
+                _configurations.Add(addEditWindow.TunnelConfig);
+                SaveConfigurations();
+                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+            }
         }
+
+        private void EditTunnel_Click(TunnelConfig config)
+        {
+            var addEditWindow = new AddEditTunnelWindow(config);
+            if (addEditWindow.ShowDialog() == true)
+            {
+                SaveConfigurations();
+                TunnelTable.ItemsSource = GenerateViewModels(_configurations);
+            }
+        }
+
     }
 }

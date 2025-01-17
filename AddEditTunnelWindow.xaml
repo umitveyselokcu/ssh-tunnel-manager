@@ -1,0 +1,41 @@
+<Window x:Class="SshTunnelManager.AddEditTunnelWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Add/Edit Tunnel" Height="400" Width="600">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Input Form -->
+        <StackPanel Grid.Row="0" Margin="10">
+            <TextBlock Text="Name:" FontWeight="Bold" />
+            <TextBox x:Name="NameTextBox" />
+
+            <TextBlock Text="IP Address:" FontWeight="Bold" Margin="0,10,0,0" />
+            <TextBox x:Name="IpAddressTextBox" />
+
+            <TextBlock Text="PEM File Name:" FontWeight="Bold" Margin="0,10,0,0" />
+            <TextBox x:Name="PemFileNameTextBox" />
+
+            <TextBlock Text="Local Port:" FontWeight="Bold" Margin="0,10,0,0" />
+            <TextBox x:Name="LocalPortTextBox" />
+
+            <TextBlock Text="Remote Host:" FontWeight="Bold" Margin="0,10,0,0" />
+            <TextBox x:Name="RemoteHostTextBox" />
+
+            <TextBlock Text="Remote Port:" FontWeight="Bold" Margin="0,10,0,0" />
+            <TextBox x:Name="RemotePortTextBox" />
+
+            <TextBlock Text="Browser URL:" FontWeight="Bold" Margin="0,10,0,0" />
+            <TextBox x:Name="BrowserUrlTextBox" />
+        </StackPanel>
+
+        <!-- Buttons -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+            <Button Content="Save" Width="100" Margin="5" Click="SaveButton_Click" />
+            <Button Content="Cancel" Width="100" Margin="5" Click="CancelButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>
