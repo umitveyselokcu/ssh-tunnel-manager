@@ -42,7 +42,7 @@
         <TextBox x:Name="BrowserUrlTextBox" Grid.Row="6" Grid.Column="1" Margin="5" />
 
         <!-- Buttons -->
-        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
             <Button Content="Save" Width="100" Margin="5" Click="SaveButton_Click" />
             <Button Content="Cancel" Width="100" Margin="5" Click="CancelButton_Click" />
         </StackPanel>

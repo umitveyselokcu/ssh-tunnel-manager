@@ -32,7 +32,7 @@
         </StackPanel>
 
         <!-- DataGrid for Tunnel Configurations -->
-        <DataGrid x:Name="TunnelTable" AutoGenerateColumns="False" Margin="10" 
+        <DataGrid x:Name="TunnelTable" AutoGenerateColumns="False" Margin="10"
                   IsReadOnly="True" CanUserAddRows="False" HeadersVisibility="Column">
 
             <DataGrid.Resources>
@@ -72,31 +72,26 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                          
-
-                                <Button Content="{Binding IsConnected, Converter={StaticResource BoolToConnectDisconnectConverter}}"
-                                        Command="{Binding ToggleConnectionCommand}" Margin="5" />
+                                <Button
+                                    Content="{Binding IsConnected, Converter={StaticResource BoolToConnectDisconnectConverter}}"
+                                    Command="{Binding ToggleConnectionCommand}" Margin="5" />
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>                        
+                </DataGridTemplateColumn>
                 <DataGridTemplateColumn Header="Browser" Width="1*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                          
                                 <Button Content="Open" Command="{Binding OpenBrowserCommand}" Margin="5" />
-
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>            
+                </DataGridTemplateColumn>
                 <DataGridTemplateColumn Header="Update" Width="2*">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                          
-
                                 <Button Content="Edit" Command="{Binding EditCommand}" Margin="5" />
                                 <Button Content="Remove" Command="{Binding RemoveConfigCommand}" Margin="5" />
                             </StackPanel>

@@ -6,6 +6,13 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
+        <ApplicationIcon>Resources\favicon.ico</ApplicationIcon>
+        <PublishSingleFile>true</PublishSingleFile>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- Use win-x86 if targeting 32-bit systems -->
+        <SelfContained>true</SelfContained>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,12 +24,10 @@
       <Folder Include="Resources\" />
     </ItemGroup>
 
-
     <ItemGroup>
       <None Remove="Resources\favicon.ico" />
       <Content Include="Resources\favicon.ico">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
-
 </Project>
